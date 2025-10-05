@@ -1,0 +1,1287 @@
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharkTracker - Rastreamento de Tubarões</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a1929;
+            color: #e0e7ff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 2px solid #2563eb;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        .logo span {
+            font-size: 2rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+
+        .btn-primary.active {
+            background: #1e40af;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.5);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #e0e7ff;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-secondary.active {
+            background: #0ea5e9;
+        }
+
+        .search-bar {
+            padding: 0.5rem 1rem;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            background: #1e293b;
+            color: #e0e7ff;
+            font-size: 0.9rem;
+            width: 200px;
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 3px;
+            background: #60a5fa;
+            border-radius: 2px;
+            transition: 0.3s;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 70px);
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: #0f172a;
+            border-right: 2px solid #1e3a5f;
+            overflow-y: auto;
+            transition: transform 0.3s;
+            z-index: 900;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #2563eb;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        .filters-section {
+            padding: 1.5rem;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        .filters-section h3 {
+            margin-bottom: 1rem;
+            color: #60a5fa;
+            font-size: 1.1rem;
+        }
+
+        .filter-group {
+            margin-bottom: 1rem;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .filter-group select,
+        .filter-group input[type="range"] {
+            width: 100%;
+            padding: 0.5rem;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            color: #e0e7ff;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .shark-list {
+            padding: 1.5rem;
+        }
+
+        .shark-list h3 {
+            margin-bottom: 1rem;
+            color: #60a5fa;
+            font-size: 1.1rem;
+        }
+
+        .shark-item {
+            background: #1e293b;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .shark-item:hover {
+            background: #334155;
+            transform: translateX(5px);
+        }
+
+        .shark-item.selected {
+            border-color: #2563eb;
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .shark-name {
+            font-weight: bold;
+            color: #60a5fa;
+            margin-bottom: 0.25rem;
+        }
+
+        .shark-species {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .shark-data {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+        }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 2px solid #2563eb;
+            z-index: 800;
+            max-width: 250px;
+            backdrop-filter: blur(10px);
+        }
+
+        .legend h3 {
+            margin-bottom: 1rem;
+            color: #60a5fa;
+            font-size: 1rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .legend-section {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #334155;
+        }
+
+        .zone-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .zone-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        /* Detail Panel */
+        .detail-panel {
+            position: absolute;
+            bottom: 0;
+            left: 320px;
+            right: 0;
+            background: rgba(15, 23, 42, 0.98);
+            border-top: 2px solid #2563eb;
+            padding: 1.5rem;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+            z-index: 850;
+            backdrop-filter: blur(10px);
+        }
+
+        .detail-panel.open {
+            transform: translateY(0);
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .detail-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        .close-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .close-btn:hover {
+            background: #dc2626;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .detail-item {
+            background: #1e293b;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+
+        .detail-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        /* Tooltip */
+        .custom-tooltip {
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #2563eb;
+            border-radius: 6px;
+            padding: 0.75rem;
+            color: #e0e7ff;
+            font-size: 0.85rem;
+            max-width: 200px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .hamburger {
+                display: flex;
+            }
+
+            .controls {
+                display: none;
+            }
+
+            .controls.mobile-open {
+                display: flex;
+                position: absolute;
+                top: 70px;
+                left: 0;
+                right: 0;
+                background: #0f172a;
+                padding: 1rem;
+                flex-direction: column;
+                border-bottom: 2px solid #2563eb;
+            }
+
+            .sidebar {
+                position: absolute;
+                height: 100%;
+                z-index: 950;
+            }
+
+            .detail-panel {
+                left: 0;
+            }
+
+            .legend {
+                top: 10px;
+                right: 10px;
+                padding: 1rem;
+                max-width: 200px;
+                font-size: 0.8rem;
+            }
+
+            .search-bar {
+                width: 100%;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Alert */
+        .alert {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1100;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 340px;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid #2563eb;
+            font-size: 0.8rem;
+            max-width: 400px;
+            z-index: 800;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo">
+            <span>🦈</span>
+            <div>Nexus Tag</div>
+        </div>
+        <div class="hamburger" id="hamburger">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+        <div class="controls" id="controls">
+            <button class="btn btn-primary active" id="btnLive">Ao Vivo</button>
+            <button class="btn btn-secondary" id="btnZones">Zonas de Forrageamento</button>
+            <button class="btn btn-secondary" id="btnTrajectories">Trajetórias</button>
+            <input type="text" class="search-bar" id="searchBar" placeholder="Buscar tubarão...">
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar" id="sidebar">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total</div>
+                    <div class="stat-value" id="statTotal">12</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Ativos</div>
+                    <div class="stat-value" id="statActive">12</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Velocidade Média</div>
+                    <div class="stat-value" id="statSpeed">10.5 km/h</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Profundidade Média</div>
+                    <div class="stat-value" id="statDepth">42.5 m</div>
+                </div>
+            </div>
+
+            <div class="filters-section">
+                <h3>Filtros</h3>
+                <div class="filter-group">
+                    <label>Espécies</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" class="species-filter" value="Tubarão-Branco" checked> Tubarão-Branco</label>
+                        <label><input type="checkbox" class="species-filter" value="Tubarão-Tigre" checked> Tubarão-Tigre</label>
+                        <label><input type="checkbox" class="species-filter" value="Tubarão-Touro" checked> Tubarão-Touro</label>
+                        <label><input type="checkbox" class="species-filter" value="Tubarão-Martelo" checked> Tubarão-Martelo</label>
+                        <label><input type="checkbox" class="species-filter" value="Tubarão-Mako" checked> Tubarão-Mako</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>Velocidade (km/h): <span id="speedValue">0-15</span></label>
+                    <input type="range" id="speedFilter" min="0" max="15" value="15" step="1">
+                </div>
+                <div class="filter-group">
+                    <label>Zona de Forrageamento</label>
+                    <select id="zoneFilter">
+                        <option value="all">Todas</option>
+                        <option value="0">Zona A - Costa do Brasil</option>
+                        <option value="1">Zona B - Golfo do México</option>
+                        <option value="2">Zona C - Grande Barreira de Coral</option>
+                        <option value="3">Zona D - Costa da Califórnia</option>
+                        <option value="4">Zona E - Mediterrâneo</option>
+                        <option value="5">Zona F - África do Sul</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="shark-list">
+                <h3>Lista de Tubarões</h3>
+                <div id="sharkListContainer"></div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+
+            <div class="legend">
+                <h3>Espécies</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Tubarão-Branco</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f97316;"></div>
+                    <span>Tubarão-Tigre</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #eab308;"></div>
+                    <span>Tubarão-Touro</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #22c55e;"></div>
+                    <span>Tubarão-Martelo</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>Tubarão-Mako</span>
+                </div>
+
+                <div class="legend-section">
+                    <h3>Zonas de Forrageamento</h3>
+                    <div class="zone-legend-item">
+                        <div class="zone-color" style="background: rgba(234, 179, 8, 0.4);"></div>
+                        <span>Baixo Risco</span>
+                    </div>
+                    <div class="zone-legend-item">
+                        <div class="zone-color" style="background: rgba(249, 115, 22, 0.4);"></div>
+                        <span>Risco Médio</span>
+                    </div>
+                    <div class="zone-legend-item">
+                        <div class="zone-color" style="background: rgba(239, 68, 68, 0.4);"></div>
+                        <span>Alto Risco</span>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <div class="detail-panel" id="detailPanel">
+                <div class="detail-header">
+                    <div class="detail-title" id="detailTitle">Selecione um tubarão</div>
+                    <button class="close-btn" id="closeDetail">Fechar</button>
+                </div>
+                <div class="detail-grid" id="detailGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Shark species configuration
+        const SPECIES = {
+            'Tubarão-Branco': { color: '#ef4444', count: 0 },
+            'Tubarão-Tigre': { color: '#f97316', count: 0 },
+            'Tubarão-Touro': { color: '#eab308', count: 0 },
+            'Tubarão-Martelo': { color: '#22c55e', count: 0 },
+            'Tubarão-Mako': { color: '#3b82f6', count: 0 }
+        };
+
+        const SHARK_NAMES = ['Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta', 'Iota', 'Kappa', 'Lambda', 'Mu'];
+
+        // Simplified land polygons for major continents and landmasses
+        const LAND_BOUNDARIES = [
+            // North America
+            { minLat: 15, maxLat: 72, minLng: -168, maxLng: -52 },
+            // South America
+            { minLat: -56, maxLat: 13, minLng: -82, maxLng: -34 },
+            // Europe
+            { minLat: 36, maxLat: 71, minLng: -10, maxLng: 40 },
+            // Africa
+            { minLat: -35, maxLat: 37, minLng: -18, maxLng: 52 },
+            // Asia
+            { minLat: -10, maxLat: 77, minLng: 26, maxLng: 180 },
+            { minLat: -10, maxLat: 77, minLng: -180, maxLng: -168 },
+            // Australia
+            { minLat: -44, maxLat: -10, minLng: 113, maxLng: 154 },
+            // Antarctica
+            { minLat: -90, maxLat: -60, minLng: -180, maxLng: 180 },
+            // Greenland
+            { minLat: 59, maxLat: 84, minLng: -73, maxLng: -11 },
+            // Madagascar
+            { minLat: -26, maxLat: -12, minLng: 43, maxLng: 51 },
+            // New Zealand
+            { minLat: -47, maxLat: -34, minLng: 166, maxLng: 179 },
+            // Japan
+            { minLat: 24, maxLat: 46, minLng: 123, maxLng: 146 },
+            // UK and Ireland
+            { minLat: 50, maxLat: 61, minLng: -11, maxLng: 2 },
+            // Scandinavia
+            { minLat: 55, maxLat: 71, minLng: 4, maxLng: 31 },
+            // Indonesia and Philippines
+            { minLat: -11, maxLat: 20, minLng: 95, maxLng: 141 },
+            // Central America
+            { minLat: 7, maxLat: 18, minLng: -93, maxLng: -77 },
+            // Caribbean Islands
+            { minLat: 10, maxLat: 27, minLng: -85, maxLng: -59 },
+            // Mediterranean Islands
+            { minLat: 35, maxLat: 42, minLng: -6, maxLng: 36 },
+            // Arabian Peninsula
+            { minLat: 12, maxLat: 32, minLng: 34, maxLng: 60 },
+            // India
+            { minLat: 6, maxLat: 36, minLng: 68, maxLng: 97 }
+        ];
+
+        function isOnLand(lat, lng) {
+            // Normalize longitude to -180 to 180 range
+            let normalizedLng = lng;
+            while (normalizedLng > 180) normalizedLng -= 360;
+            while (normalizedLng < -180) normalizedLng += 360;
+            
+            for (const boundary of LAND_BOUNDARIES) {
+                if (lat >= boundary.minLat && lat <= boundary.maxLat) {
+                    // Handle boundaries that cross the antimeridian
+                    if (boundary.minLng > boundary.maxLng) {
+                        if (normalizedLng >= boundary.minLng || normalizedLng <= boundary.maxLng) {
+                            return true;
+                        }
+                    } else {
+                        if (normalizedLng >= boundary.minLng && normalizedLng <= boundary.maxLng) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function isNearLand(lat, lng, buffer = 2) {
+            // Check points around the current position
+            const checkPoints = [
+                [lat, lng],
+                [lat + buffer, lng],
+                [lat - buffer, lng],
+                [lat, lng + buffer],
+                [lat, lng - buffer],
+                [lat + buffer, lng + buffer],
+                [lat + buffer, lng - buffer],
+                [lat - buffer, lng + buffer],
+                [lat - buffer, lng - buffer]
+            ];
+            
+            for (const point of checkPoints) {
+                if (isOnLand(point[0], point[1])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function getSafeDirection(lat, lng) {
+            const directions = [];
+            const step = 1;
+            
+            // Check 8 directions
+            for (let dlat = -1; dlat <= 1; dlat++) {
+                for (let dlng = -1; dlng <= 1; dlng++) {
+                    if (dlat === 0 && dlng === 0) continue;
+                    
+                    const newLat = lat + dlat * step;
+                    const newLng = lng + dlng * step;
+                    
+                    if (!isOnLand(newLat, newLng)) {
+                        directions.push({ dlat, dlng });
+                    }
+                }
+            }
+            
+            // Return a random safe direction, or default to moving away from poles
+            if (directions.length > 0) {
+                return directions[Math.floor(Math.random() * directions.length)];
+            }
+            
+            // Default: move towards equator and away from land
+            return { dlat: lat > 0 ? -1 : 1, dlng: 0 };
+        }
+
+        // Foraging zones configuration
+        const FORAGING_ZONES = [
+            { name: 'Zona A - Costa do Brasil', center: [-15, -38], radius: 300000, risk: 'low', color: 'rgba(234, 179, 8, 0.4)', description: 'Baixo Risco - Presas escassas como pequenos peixes' },
+            { name: 'Zona B - Golfo do México', center: [25, -90], radius: 350000, risk: 'high', color: 'rgba(239, 68, 68, 0.4)', description: 'Alto Risco - Abundância de presas marítimas como moluscos e mamíferos' },
+            { name: 'Zona C - Grande Barreira de Coral', center: [-18, 147], radius: 400000, risk: 'medium', color: 'rgba(249, 115, 22, 0.4)', description: 'Risco Médio - Cardumes moderados' },
+            { name: 'Zona D - Costa da Califórnia', center: [36, -122], radius: 280000, risk: 'medium', color: 'rgba(249, 115, 22, 0.4)', description: 'Risco Médio - Cardumes moderados' },
+            { name: 'Zona E - Mediterrâneo', center: [36, 15], radius: 250000, risk: 'low', color: 'rgba(234, 179, 8, 0.4)', description: 'Baixo Risco - Presas escassas como pequenos peixes' },
+            { name: 'Zona F - África do Sul', center: [-34, 18], radius: 320000, risk: 'high', color: 'rgba(239, 68, 68, 0.4)', description: 'Alto Risco - Abundância de presas marítimas como moluscos e mamíferos' }
+        ];
+
+        // Initialize map
+        const map = L.map('map', {
+            center: [0, -30],
+            zoom: 3,
+            minZoom: 2,
+            maxZoom: 8,
+            worldCopyJump: true
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            noWrap: false
+        }).addTo(map);
+
+        // Create canvas overlay for shark rendering
+        const canvasPane = map.createPane('canvasPane');
+        canvasPane.style.zIndex = 650;
+        const canvas = document.createElement('canvas');
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.pointerEvents = 'none';
+        canvasPane.appendChild(canvas);
+        const ctx = canvas.getContext('2d');
+
+        // Resize canvas to match map
+        function resizeCanvas() {
+            const size = map.getSize();
+            canvas.width = size.x;
+            canvas.height = size.y;
+        }
+        resizeCanvas();
+        map.on('resize', resizeCanvas);
+
+        // Create sharks
+        const sharks = [];
+        const speciesArray = Object.keys(SPECIES);
+        
+        for (let i = 0; i < 12; i++) {
+            const species = speciesArray[i % speciesArray.length];
+            const zoneIndex = Math.floor(i / 2); // 2 sharks per zone
+            const zone = FORAGING_ZONES[zoneIndex];
+            
+            // Random position near zone, avoiding land
+            let lat, lng;
+            let attempts = 0;
+            do {
+                const offsetLat = (Math.random() - 0.5) * 20;
+                const offsetLng = (Math.random() - 0.5) * 20;
+                lat = zone.center[0] + offsetLat;
+                lng = zone.center[1] + offsetLng;
+                attempts++;
+            } while (isOnLand(lat, lng) && attempts < 100); // Try to find a non-land spot
+
+            if (isOnLand(lat,lng)) { // Fallback if still on land after many attempts
+                lat = zone.center[0];
+                lng = zone.center[1];
+            }
+            
+            const shark = {
+                id: i,
+                name: SHARK_NAMES[i],
+                species: species,
+                color: SPECIES[species].color,
+                lat: lat,
+                lng: lng,
+                speed: 6 + Math.random() * 9, // 6-15 km/h
+                depth: 25 + Math.random() * 35, // 25-60m
+                temp: 16 + Math.random() * 9, // 16-25°C
+                length: 3 + Math.random() * 1.5, // 3-4.5m
+                age: 3 + Math.floor(Math.random() * 7), // 3-9 years
+                vx: (Math.random() - 0.5) * 0.008,
+                vy: (Math.random() - 0.5) * 0.008,
+                targetVx: (Math.random() - 0.5) * 0.008,
+                targetVy: (Math.random() - 0.5) * 0.008,
+                frameCount: 0,
+                trajectory: [],
+                assignedZone: zoneIndex,
+                lastUpdate: new Date().toLocaleString('pt-BR'),
+                visible: true,
+                inHighRiskZone: false
+            };
+            
+            sharks.push(shark);
+            SPECIES[species].count++;
+        }
+
+        // Draw foraging zones
+        const zoneCircles = [];
+        FORAGING_ZONES.forEach((zone, index) => {
+            const circle = L.circle(zone.center, {
+                radius: zone.radius,
+                color: zone.color.replace('0.4', '0.8'),
+                fillColor: zone.color,
+                fillOpacity: 0.3,
+                weight: 2
+            }).addTo(map);
+            
+            circle.bindTooltip(`<div class="custom-tooltip"><strong>${zone.name}</strong><br>${zone.description}<br><em>Área de forrageamento: Onde tubarões se alimentam de coisas marítimas (ex.: peixes, crustáceos)</em></div>`, {
+                permanent: false,
+                direction: 'top'
+            });
+            
+            zoneCircles.push(circle);
+        });
+
+        // State management
+        let showZones = true;
+        let showTrajectories = false;
+        let selectedShark = null;
+        let filters = {
+            species: new Set(speciesArray),
+            maxSpeed: 15,
+            zone: 'all'
+        };
+
+        // Shark markers for click detection
+        const sharkMarkers = [];
+        sharks.forEach(shark => {
+            const icon = L.divIcon({
+                html: `<div style="width: 20px; height: 20px; background: ${shark.color}; border: 2px solid white; border-radius: 50%; cursor: pointer;"></div>`,
+                className: '',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+            
+            const marker = L.marker([shark.lat, shark.lng], { icon: icon }).addTo(map);
+            marker.on('click', () => selectShark(shark));
+            sharkMarkers.push({ shark: shark, marker: marker });
+        });
+
+        // Animation loop
+        let animationId;
+        function animate() {
+            sharks.forEach(shark => {
+                shark.frameCount++;
+                
+                // Change direction every 1200 frames (~20s at 60fps)
+                if (shark.frameCount % 1200 === 0) {
+                    shark.targetVx = (Math.random() - 0.5) * 0.008;
+                    shark.targetVy = (Math.random() - 0.5) * 0.008;
+                }
+                
+                // Smooth interpolation to target velocity
+                shark.vx += (shark.targetVx - shark.vx) * 0.01;
+                shark.vy += (shark.targetVy - shark.vy) * 0.01;
+                
+                // Attraction to assigned foraging zone
+                const zone = FORAGING_ZONES[shark.assignedZone];
+                const dx = zone.center[1] - shark.lng;
+                const dy = zone.center[0] - shark.lat;
+                const distToZone = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distToZone > 15) { // If far from zone, pull towards it
+                    shark.vx += dx * 0.0005;
+                    shark.vy += dy * 0.0005;
+                }
+                
+                // Clamp velocity to max speed
+                const speed = Math.sqrt(shark.vx * shark.vx + shark.vy * shark.vy);
+                if (speed > 0.008) {
+                    shark.vx = (shark.vx / speed) * 0.008;
+                    shark.vy = (shark.vy / speed) * 0.008;
+                }
+                
+                const nextLng = shark.lng + shark.vx;
+                const nextLat = shark.lat + shark.vy;
+                
+                if (isOnLand(nextLat, nextLng)) {
+                    // Shark hit land, bounce back
+                    const safeDir = getSafeDirection(shark.lat, shark.lng);
+                    shark.targetVx = safeDir.dlng * 0.006;
+                    shark.targetVy = safeDir.dlat * 0.006;
+                    shark.vx = shark.targetVx;
+                    shark.vy = shark.targetVy;
+                } else if (isNearLand(nextLat, nextLng, 1.5)) {
+                    const safeDir = getSafeDirection(shark.lat, shark.lng);
+                    shark.targetVx += safeDir.dlng * 0.003;
+                    shark.targetVy += safeDir.dlat * 0.003;
+                } else {
+                    shark.lng = nextLng;
+                    shark.lat = nextLat;
+                }
+                
+                // Wrap around world edges (toroidal)
+                if (shark.lng < -180) shark.lng = 180;
+                if (shark.lng > 180) shark.lng = -180;
+                if (shark.lat < -85) shark.lat = -85;
+                if (shark.lat > 85) shark.lat = 85;
+                
+                
+                // Add to trajectory
+                shark.trajectory.push([shark.lat, shark.lng]);
+                if (shark.trajectory.length > 100) {
+                    shark.trajectory.shift();
+                }
+                
+                // Check if in high-risk zone
+                const wasInHighRisk = shark.inHighRiskZone;
+                shark.inHighRiskZone = false;
+                FORAGING_ZONES.forEach(zone => {
+                    if (zone.risk === 'high') {
+                        const dist = map.distance([shark.lat, shark.lng], zone.center);
+                        if (dist < zone.radius) {
+                            shark.inHighRiskZone = true;
+                        }
+                    }
+                });
+                
+                // Alert if entering high-risk zone
+                if (shark.inHighRiskZone && !wasInHighRisk) {
+                    showAlert(`Alerta: ${shark.name} em zona vermelha – possível alimentação intensa!`);
+                }
+                
+                // Update marker position
+                const markerObj = sharkMarkers.find(m => m.shark.id === shark.id);
+                if (markerObj) {
+                    markerObj.marker.setLatLng([shark.lat, shark.lng]);
+                }
+            });
+            
+            // Draw on canvas
+            drawSharks();
+            
+            // Update stats
+            updateStats();
+            
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function drawSharks() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            sharks.forEach(shark => {
+                if (!shark.visible) return;
+                
+                const point = map.latLngToContainerPoint([shark.lat, shark.lng]);
+                
+                // Draw trajectory if enabled
+                if (showTrajectories && shark.trajectory.length > 1) {
+                    ctx.strokeStyle = shark.color + '80'; // Semi-transparent
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    shark.trajectory.forEach((pos, i) => {
+                        const p = map.latLngToContainerPoint(pos);
+                        if (i === 0) {
+                            ctx.moveTo(p.x, p.y);
+                        } else {
+                            ctx.lineTo(p.x, p.y);
+                        }
+                    });
+                    ctx.stroke();
+                }
+                
+                // Draw shark icon (simple triangle)
+                ctx.fillStyle = shark.color;
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                const angle = Math.atan2(shark.vy, shark.vx);
+                const size = selectedShark && selectedShark.id === shark.id ? 12 : 8;
+                
+                ctx.save();
+                ctx.translate(point.x, point.y);
+                ctx.rotate(angle);
+                ctx.moveTo(size, 0);
+                ctx.lineTo(-size, size);
+                ctx.lineTo(-size, -size);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+                
+                // Glow effect for selected shark
+                if (selectedShark && selectedShark.id === shark.id) {
+                    ctx.strokeStyle = shark.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, 20, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // Update stats
+        function updateStats() {
+            const visibleSharks = sharks.filter(s => s.visible);
+            const avgSpeed = visibleSharks.length > 0 ? visibleSharks.reduce((sum, s) => sum + s.speed, 0) / visibleSharks.length : 0;
+            const avgDepth = visibleSharks.length > 0 ? visibleSharks.reduce((sum, s) => sum + s.depth, 0) / visibleSharks.length : 0;
+            
+            document.getElementById('statTotal').textContent = sharks.length;
+            document.getElementById('statActive').textContent = visibleSharks.length;
+            document.getElementById('statSpeed').textContent = avgSpeed.toFixed(1) + ' km/h';
+            document.getElementById('statDepth').textContent = avgDepth.toFixed(1) + ' m';
+        }
+
+        // Render shark list
+        function renderSharkList() {
+            const container = document.getElementById('sharkListContainer');
+            container.innerHTML = '';
+            
+            sharks.forEach(shark => {
+                if (!shark.visible) return;
+                
+                const item = document.createElement('div');
+                item.className = 'shark-item';
+                if (selectedShark && selectedShark.id === shark.id) {
+                    item.classList.add('selected');
+                }
+                
+                item.innerHTML = `
+                    <div class="shark-name" style="color: ${shark.color}">${shark.name}</div>
+                    <div class="shark-species">${shark.species}</div>
+                    <div class="shark-data">
+                        <span>🏃 ${shark.speed.toFixed(1)} km/h</span>
+                        <span>📏 ${shark.depth.toFixed(0)} m</span>
+                    </div>
+                `;
+                
+                item.addEventListener('click', () => selectShark(shark));
+                container.appendChild(item);
+            });
+        }
+
+        // Select shark
+        function selectShark(shark) {
+            selectedShark = shark;
+            map.setView([shark.lat, shark.lng], 5);
+            
+            const panel = document.getElementById('detailPanel');
+            panel.classList.add('open');
+            
+            document.getElementById('detailTitle').textContent = `${shark.name} - ${shark.species}`;
+            document.getElementById('detailGrid').innerHTML = `
+                <div class="detail-item">
+                    <div class="detail-label">Espécie</div>
+                    <div class="detail-value" style="color: ${shark.color}">${shark.species}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Velocidade</div>
+                    <div class="detail-value">${shark.speed.toFixed(1)} km/h</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Profundidade</div>
+                    <div class="detail-value">${shark.depth.toFixed(0)} m</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Temperatura</div>
+                    <div class="detail-value">${shark.temp.toFixed(1)} °C</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Comprimento</div>
+                    <div class="detail-value">${shark.length.toFixed(1)} m</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Idade</div>
+                    <div class="detail-value">${shark.age} anos</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Última Atualização</div>
+                    <div class="detail-value" style="font-size: 0.9rem;">${shark.lastUpdate}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Zona Atribuída</div>
+                    <div class="detail-value" style="font-size: 0.9rem;">${FORAGING_ZONES[shark.assignedZone].name}</div>
+                </div>
+            `;
+            
+            renderSharkList();
+        }
+
+        // Apply filters
+        function applyFilters() {
+            sharks.forEach(shark => {
+                let visible = true;
+                
+                // Species filter
+                if (!filters.species.has(shark.species)) {
+                    visible = false;
+                }
+                
+                // Speed filter
+                if (shark.speed > filters.maxSpeed) {
+                    visible = false;
+                }
+                
+                // Zone filter
+                if (filters.zone !== 'all' && shark.assignedZone !== parseInt(filters.zone)) {
+                    visible = false;
+                }
+                
+                shark.visible = visible;
+                
+                // Update marker visibility
+                const markerObj = sharkMarkers.find(m => m.shark.id === shark.id);
+                if (markerObj) {
+                    if (visible) {
+                        markerObj.marker.addTo(map);
+                    } else {
+                        markerObj.marker.remove();
+                    }
+                }
+            });
+            
+            renderSharkList();
+        }
+
+        // Show alert
+        function showAlert(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert';
+            alert.textContent = message;
+            document.body.appendChild(alert);
+            
+            console.log(message);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Event listeners
+        document.getElementById('btnZones').addEventListener('click', function() {
+            showZones = !showZones;
+            this.classList.toggle('active');
+            zoneCircles.forEach(circle => {
+                if (showZones) {
+                    circle.addTo(map);
+                } else {
+                    circle.remove();
+                }
+            });
+        });
+
+        document.getElementById('btnTrajectories').addEventListener('click', function() {
+            showTrajectories = !showTrajectories;
+            this.classList.toggle('active');
+        });
+
+        document.getElementById('closeDetail').addEventListener('click', () => {
+            document.getElementById('detailPanel').classList.remove('open');
+            selectedShark = null;
+            renderSharkList();
+        });
+
+        document.getElementById('hamburger').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+            document.getElementById('controls').classList.toggle('mobile-open');
+        });
+
+        document.getElementById('searchBar').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            if (query) {
+                const found = sharks.find(s => 
+                    s.name.toLowerCase().includes(query) || 
+                    s.species.toLowerCase().includes(query) ||
+                    s.id.toString() === query
+                );
+                if (found) {
+                    selectShark(found);
+                }
+            }
+        });
+
+        // Filter event listeners
+        document.querySelectorAll('.species-filter').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    filters.species.add(e.target.value);
+                } else {
+                    filters.species.delete(e.target.value);
+                }
+                applyFilters();
+            });
+        });
+
+        document.getElementById('speedFilter').addEventListener('input', (e) => {
+            filters.maxSpeed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = `0-${filters.maxSpeed}`;
+            applyFilters();
+        });
+
+        document.getElementById('zoneFilter').addEventListener('change', (e) => {
+            filters.zone = e.target.value;
+            applyFilters();
+        });
+
+        // Map events
+        map.on('move', () => {
+            const topLeft = map.containerPointToLayerPoint([0, 0]);
+            L.DomUtil.setPosition(canvas, topLeft);
+        });
+
+        map.on('zoom', resizeCanvas);
+
+        // Initialize
+        renderSharkList();
+        animate();
+    </script>
+</body>
+</html>
